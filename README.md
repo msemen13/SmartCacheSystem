@@ -93,3 +93,33 @@ You can run the unit tests with:
 ```bash
 dotnet test
 ```
+
+## API Key Authentication
+This API requires an API Key for authentication. Requests without a valid API Key will be rejected.
+
+Using the API Key in API Clients
+### Postman
+- Open Postman.
+- Under the Authorization tab, choose API Key.
+- Set Key = X-API-Key.
+- Set Value = YourSecureGeneratedApiKey12345.
+- Select Add to Header and send your request.
+### Manual Request Example (cURL)
+```sh
+curl -X POST "https://localhost:7046/addemail" \
+     -H "X-API-Key: RandomPassKey5489" \
+     -H "Content-Type: application/json" \
+     -d '{ "email": "test@gmail.com" }'
+```
+
+Error Responses
+- 401 Unauthorized → API Key is missing or invalid.
+- 403 Forbidden → API Key does not have permission to access this resource.
+
+### Configuration
+The API key is stored securely in appsettings.json or environment variables:
+```json
+{
+  "ApiKey": "RandomPassKey5489"
+}
+```
