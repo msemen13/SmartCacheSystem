@@ -1,5 +1,7 @@
 using Orleans.Configuration;
 using SmartCache.Grains.Abstractions;
+using System.Net.Mail;
+using System.Text.RegularExpressions;
 
 namespace SmartCache.Client
 {
@@ -43,6 +45,11 @@ namespace SmartCache.Client
 
             app.MapPost("addemail", async (string email, IClusterClient clusterClient) =>
             {
+                //if (!IsValidEmail(email))
+                //{
+                //    return Results.BadRequest("Invalid email format.");
+                //}
+
                 var checkingEmailGrain = clusterClient.GetGrain<IBreachedEmailGrain>(email);
 
                 var status = await checkingEmailGrain.AddBreachedEmail();
@@ -82,5 +89,24 @@ namespace SmartCache.Client
 
             app.Run();
         }
+
+        public static bool IsValidEmail(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+                return false;
+
+            try
+            {
+                var mail = new MailAddress(email);
+
+                string pattern = @"^[^@\s]+@[^@\s]+\.[a-zA-Z]{2,}$";
+                return Regex.IsMatch(email, pattern);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
     }
 }
