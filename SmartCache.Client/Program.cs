@@ -63,7 +63,7 @@ namespace SmartCache.Client
                 {
                     var checkingEmailGrain = clusterClient.GetGrain<IBreachedEmailGrain>(email);
 
-                    await checkingEmailGrain.SetBreachedStatus(true);
+                    await checkingEmailGrain.AddBreachedEmail();
                 }
 
                 return Results.Ok();

@@ -6,7 +6,6 @@ namespace SmartCache.Grains.Grains
     public class BreachedEmailGrain : Grain, IBreachedEmailGrain
     {
         private bool _isBreached;
-
         private readonly IPersistentState<CheckingEmailState> _checkingEmailState;
 
         public BreachedEmailGrain(
@@ -38,11 +37,6 @@ namespace SmartCache.Grains.Grains
             _isBreached = true;
 
             return true;
-        }
-
-        public async Task SetBreachedStatus(bool status)
-        {
-            _isBreached = status;
         }
 
         public async Task Remove()
