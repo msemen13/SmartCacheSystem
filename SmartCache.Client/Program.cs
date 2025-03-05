@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Authentication;
 using Orleans.Configuration;
+using SmartCache.Client.Authentication;
 using SmartCache.Grains.Abstractions;
 using System.Net.Mail;
 using System.Text.RegularExpressions;
@@ -25,7 +27,15 @@ namespace SmartCache.Client
                 });
             });
 
+            builder.Services.AddAuthentication("ApiKey")
+                .AddScheme<AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>("ApiKey", null);
+
+            builder.Services.AddAuthorization();
+
             var app = builder.Build();
+
+            app.UseAuthentication();
+            app.UseAuthorization();
 
             app.MapGet("checkemail/{email}", async (string email, IClusterClient clusterClient) =>
             {
@@ -41,14 +51,14 @@ namespace SmartCache.Client
                 {
                     return Results.NotFound();
                 }
-            });
+            }).RequireAuthorization();
 
             app.MapPost("addemail", async (string email, IClusterClient clusterClient) =>
             {
-                //if (!IsValidEmail(email))
-                //{
-                //    return Results.BadRequest("Invalid email format.");
-                //}
+                if (!IsValidEmail(email))
+                {
+                    return Results.BadRequest("Invalid email format.");
+                }
 
                 var checkingEmailGrain = clusterClient.GetGrain<IBreachedEmailGrain>(email);
 
@@ -62,7 +72,7 @@ namespace SmartCache.Client
                 {
                     return Results.Conflict();
                 }
-            });
+            }).RequireAuthorization();
 
             app.MapPost("addemails", async (List<string> emails, IClusterClient clusterClient) =>
             {
@@ -87,31 +97,6 @@ namespace SmartCache.Client
                 var addedEmails = results.Where(x => x.status).Select(x => x.email).ToList();
                 var breachedEmails = results.Where(x => !x.status).Select(x => x.email).ToList();
 
-
-                //var addedEmails = new List<string>();
-                //var breachedEmails = new List<string>();
-
-                //foreach (var email in emails)
-                //{
-                //    if (!IsValidEmail(email))
-                //    {
-                //        invalidEmails.Add(email);
-                //        continue;
-                //    }
-
-                //    var checkingEmailGrain = clusterClient.GetGrain<IBreachedEmailGrain>(email);
-                //    var status = await checkingEmailGrain.AddBreachedEmail();
-
-                //    if (status)
-                //    {
-                //        addedEmails.Add(email);
-                //    }
-                //    else
-                //    {
-                //        breachedEmails.Add(email);
-                //    }
-                //}
-
                 var response = new
                 {
                     AddedEmails = addedEmails,
@@ -121,16 +106,7 @@ namespace SmartCache.Client
 
                 return Results.Ok(response);
 
-                //foreach (var email in emails)
-                //{
-                //    var checkingEmailGrain = clusterClient.GetGrain<IBreachedEmailGrain>(email);
-
-                //    await checkingEmailGrain.AddBreachedEmail();
-                //}
-
-                //return Results.Ok();
-
-            });
+            }).RequireAuthorization();
 
             app.MapPost("deleteemail", async (string email, IClusterClient clusterClient) =>
             {
@@ -140,7 +116,7 @@ namespace SmartCache.Client
 
                 return Results.Ok();
 
-            });
+            }).RequireAuthorization();
 
             app.Run();
         }
