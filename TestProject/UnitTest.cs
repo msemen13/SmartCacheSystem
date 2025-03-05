@@ -187,23 +187,25 @@ namespace SmartCache.Tests
             }
 
             // Act
-            bool allBreached = true;
-            foreach (var email in emails)
+            var addTasks = emails.Select(async email =>
             {
                 var grain = _clusterClient.GetGrain<IBreachedEmailGrain>(email);
                 await grain.AddBreachedEmail();
+                return await grain.IsBreached();
+            });
 
-                if (!await grain.IsBreached()) allBreached = false;
-            }
+            var addResults = await Task.WhenAll(addTasks);
+            bool allBreached = addResults.All(status => status); 
 
-            // Act 
-            bool allAddedConflict = true;
-            foreach (var email in emails)
+
+            var conflictTasks = emails.Select(async email =>
             {
                 var grain = _clusterClient.GetGrain<IBreachedEmailGrain>(email);
-                var result = await grain.AddBreachedEmail();
-                if (result) allAddedConflict = false;
-            }
+                return await grain.AddBreachedEmail();
+            });
+
+            var conflictResults = await Task.WhenAll(conflictTasks);
+            bool allAddedConflict = conflictResults.All(result => !result);
 
             // Assert
             allBreached.Should().BeTrue();
@@ -222,24 +224,28 @@ namespace SmartCache.Tests
             }
 
             // Act
-            bool allBreached = true;
-            foreach (var email in emails)
+            var addTasks = emails.Select(async email =>
             {
                 var grain = _clusterClient.GetGrain<IBreachedEmailGrain>(email);
                 await grain.AddBreachedEmail();
+                return await grain.IsBreached();
+            });
 
-                if (!await grain.IsBreached()) allBreached = false;
-            }
+            var addResults = await Task.WhenAll(addTasks);
+            bool allBreached = addResults.All(status => status); 
 
-            bool allRemoved = true;
-            foreach (var email in emails)
+
+            var removeTasks = emails.Select(async email =>
             {
                 var grain = _clusterClient.GetGrain<IBreachedEmailGrain>(email);
                 await grain.Remove();
+                return await grain.IsBreached();
+            });
 
-                if (await grain.IsBreached()) allRemoved = false;
-            }
+            var removeResults = await Task.WhenAll(removeTasks);
+            bool allRemoved = removeResults.All(status => !status); 
 
+            // Assert
             allBreached.Should().BeTrue();
             allRemoved.Should().BeTrue();
         }

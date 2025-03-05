@@ -66,14 +66,69 @@ namespace SmartCache.Client
 
             app.MapPost("addemails", async (List<string> emails, IClusterClient clusterClient) =>
             {
-                foreach (var email in emails)
+                if (emails == null || emails.Count == 0)
                 {
-                    var checkingEmailGrain = clusterClient.GetGrain<IBreachedEmailGrain>(email);
-
-                    await checkingEmailGrain.AddBreachedEmail();
+                    return Results.BadRequest("Email list is empty.");
                 }
 
-                return Results.Ok();
+                var invalidEmails = emails.Where(email => !IsValidEmail(email)).ToList();
+                var validEmails = emails.Except(invalidEmails).ToList();
+
+
+                var tasks = validEmails.Select(async email =>
+                {
+                    var checkingEmailGrain = clusterClient.GetGrain<IBreachedEmailGrain>(email);
+                    var status = await checkingEmailGrain.AddBreachedEmail();
+                    return (email, status);
+                });
+
+                var results = await Task.WhenAll(tasks);
+
+                var addedEmails = results.Where(x => x.status).Select(x => x.email).ToList();
+                var breachedEmails = results.Where(x => !x.status).Select(x => x.email).ToList();
+
+
+                //var addedEmails = new List<string>();
+                //var breachedEmails = new List<string>();
+
+                //foreach (var email in emails)
+                //{
+                //    if (!IsValidEmail(email))
+                //    {
+                //        invalidEmails.Add(email);
+                //        continue;
+                //    }
+
+                //    var checkingEmailGrain = clusterClient.GetGrain<IBreachedEmailGrain>(email);
+                //    var status = await checkingEmailGrain.AddBreachedEmail();
+
+                //    if (status)
+                //    {
+                //        addedEmails.Add(email);
+                //    }
+                //    else
+                //    {
+                //        breachedEmails.Add(email);
+                //    }
+                //}
+
+                var response = new
+                {
+                    AddedEmails = addedEmails,
+                    BreachedEmails = breachedEmails,
+                    InvalidEmails = invalidEmails
+                };
+
+                return Results.Ok(response);
+
+                //foreach (var email in emails)
+                //{
+                //    var checkingEmailGrain = clusterClient.GetGrain<IBreachedEmailGrain>(email);
+
+                //    await checkingEmailGrain.AddBreachedEmail();
+                //}
+
+                //return Results.Ok();
 
             });
 
